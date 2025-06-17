@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, ConflictException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Brand } from './brand.entity';
@@ -12,7 +12,16 @@ export class BrandService {
     private brandRepository: Repository<Brand>,
   ) {}
 
-  create(createBrandDto: CreateBrandDto) {
+  async create(createBrandDto: CreateBrandDto) {
+    // REGRA DE NEGÓCIO: Não permitir marcas duplicadas
+    const existingBrand = await this.brandRepository.findOne({
+      where: { name: createBrandDto.name }
+    });
+
+    if (existingBrand) {
+      throw new ConflictException(`Marca '${createBrandDto.name}' já existe no sistema`);
+    }
+
     const brand = this.brandRepository.create(createBrandDto);
     return this.brandRepository.save(brand);
   }

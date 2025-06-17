@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, BadRequestException, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Sale } from './sale.entity';
@@ -18,10 +18,8 @@ export class SaleService {
   async create(createSaleDto: CreateSaleDto) {
     const { items, ...saleData } = createSaleDto;
     
-    // Calculate total value
     const totalValue = items.reduce((sum, item) => sum + item.subtotal, 0);
     
-    // Create sale
     const sale = this.saleRepository.create({
       ...saleData,
       totalValue,
@@ -29,7 +27,6 @@ export class SaleService {
     
     const savedSale = await this.saleRepository.save(sale);
     
-    // Create sale items
     const saleItems = items.map(item => 
       this.saleItemRepository.create({
         ...item,
@@ -74,8 +71,15 @@ export class SaleService {
     });
   }
 
-  update(id: number, updateSaleDto: UpdateSaleDto) {
-    return this.saleRepository.update(id, updateSaleDto);
+  async update(id: number, updateSaleDto: UpdateSaleDto) {
+    const existingSale = await this.saleRepository.findOne({ where: { id } });
+    if (!existingSale) {
+      throw new Error('Sale not found');
+    }
+
+    const result = await this.saleRepository.update(id, updateSaleDto);
+
+    return this.findOne(id);
   }
 
   updateStatus(id: number, status: string) {

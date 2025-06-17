@@ -1,6 +1,6 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, MoreThan } from 'typeorm';
 import { Accessory } from './accessory.entity';
 import { CreateAccessoryDto } from './dto/create-accessory.dto';
 import { UpdateAccessoryDto } from './dto/update-accessory.dto';
@@ -13,8 +13,29 @@ export class AccessoryService {
   ) {}
 
   create(createAccessoryDto: CreateAccessoryDto) {
+    // REGRA DE NEGÓCIO 7: Não permitir criar acessórios com preço negativo
+    if (createAccessoryDto.price < 0) {
+      throw new BadRequestException(
+        `Preço não pode ser negativo. Valor informado: R$ ${createAccessoryDto.price}`
+      );
+    }
+
     const accessory = this.accessoryRepository.create(createAccessoryDto);
     return this.accessoryRepository.save(accessory);
+  }
+
+  // REGRA DE NEGÓCIO 4: Método específico para buscar apenas com estoque
+  async findAllInStock() {
+    const accessories = await this.accessoryRepository.find({
+      where: { stock: MoreThan(0) },
+      relations: ['compatiblePhones'],
+    });
+
+    if (accessories.length === 0) {
+      throw new BadRequestException('Nenhum acessório disponível em estoque no momento');
+    }
+
+    return accessories;
   }
 
   findAll() {
@@ -48,7 +69,22 @@ export class AccessoryService {
     return this.accessoryRepository.update(id, updateAccessoryDto);
   }
 
-  updateStock(id: number, quantity: number) {
+  async updateStock(id: number, quantity: number) {
+    // REGRA DE NEGÓCIO 8: Não permitir reduzir estoque abaixo de 0
+    const accessory = await this.accessoryRepository.findOne({ where: { id } });
+
+    if (!accessory) {
+      throw new BadRequestException(`Acessório com ID ${id} não encontrado`);
+    }
+
+    const newStock = accessory.stock + quantity;
+
+    if (newStock < 0) {
+      throw new BadRequestException(
+        `Operação resultaria em estoque negativo. Estoque atual: ${accessory.stock}, Quantidade solicitada: ${quantity}, Resultado: ${newStock}`
+      );
+    }
+
     return this.accessoryRepository
       .createQueryBuilder()
       .update(Accessory)

@@ -1,6 +1,7 @@
-import { PartialType } from '@nestjs/mapped-types';
-import { CreateSaleDto } from './create-sale.dto';
-
-export class UpdateSaleDto extends PartialType(CreateSaleDto) {
+export class UpdateSaleDto {
+  customerId?: number;
+  storeId?: number;
+  paymentMethod?: 'pix' | 'debit' | 'credit';
+  seller?: string;
   status?: 'pending' | 'completed' | 'canceled';
 }

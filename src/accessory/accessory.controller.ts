@@ -32,6 +32,11 @@ export class AccessoryController {
     return this.accessoryService.findInStock();
   }
 
+  @Get('stock/only-available')
+  findAllInStock() {
+    return this.accessoryService.findAllInStock();
+  }
+
   @Patch(':id')
   update(@Param('id') id: string, @Body() updateAccessoryDto: UpdateAccessoryDto) {
     return this.accessoryService.update(+id, updateAccessoryDto);
